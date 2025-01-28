@@ -11,14 +11,14 @@ client.on('ready', () => {
 	console.log(`Esse Bot é utilizado em ${client.guilds.cache.size} servidores!`);
 });
 
-// add this guild to database
+// adiciona esse servidor ao banco de dados
 client.on("guildCreate", guild => {
 	db.set(guild.id, {
 		countChannels: []
 		}).write()
 })
 
-// remove this guild from database
+// remove esse servidor do banco de dados
 client.on("guildDelete", guild => {
 	db.get(guild.id).remove().write()
 })
@@ -69,16 +69,17 @@ function getTopycMsg(qtd){
 
 client.on('message', async message => {
 	
-	if(message.author.bot) return;
-    if(message.channel.type === 'dm') return;
-    if(!message.content.startsWith(config.prefix)) return;
-	if(!message.member.hasPermission('ADMINISTRATOR')) return;
+	if(message.author.bot) return; // Ignora mensagens de bots
+    if(message.channel.type === 'dm') return; // Ignora mensagens de DM
+    if(!message.content.startsWith(config.prefix)) return; // Verifica se a mensagem começa com o prefixo
+	if(!message.member.hasPermission('ADMINISTRATOR')) return; // Verifica se o membro tem permissão de administrador
 	
 	const args = message.content.slice(config.prefix.length).trim().split(/ +/g);
 	const comand = args.shift().toLowerCase();
 	
 	if (comand === 'contador-add') {
 
+		// Verifica se o contador já foi adicionado para esse canal
 		if(db.get(`${message.guild.id}.countChannels`).find({id: message.channel.id}).value() == null){
 				
 			db.get(`${message.guild.id}.countChannels`).push({id: message.channel.id}).write();
@@ -96,12 +97,13 @@ client.on('message', async message => {
 	}
 	else if (comand === 'contador-remover') {
 		
+		// Verifica se o contador está configurado para esse canal
 		if(db.get(`${message.guild.id}.countChannels`).find({id: message.channel.id}).value() == null){
 			message.reply('Não tem contador de membros adicionado para esse canal!');
 		}
 		else{
 			let channel = message.guild.channels.cache.get(message.channel.id);
-			channel.setTopic('')
+			channel.setTopic('') // Remove o contador do tópico do canal
 				.catch(console.error);
 				
 			db.get(`${message.guild.id}.countChannels`).remove({id: message.channel.id}).write();
@@ -110,6 +112,7 @@ client.on('message', async message => {
 		}
 	}
 	else if(comand === 'contador-atualizar'){
+		// Atualiza o contador em todos os canais configurados
 		db.get(`${message.guild.id}.countChannels`).value().forEach(channelDB => { 
 			let channel = message.guild.channels.cache.get(channelDB.id);
 			channel.setTopic(getTopycMsg(message.guild.members.cache.filter(member => !member.user.bot).size))
@@ -121,7 +124,7 @@ client.on('message', async message => {
 	
 });
 
-// update member counter on channels topic when member join guild
+// atualiza o contador de membros no tópico dos canais quando um membro entra no servidor
 client.on('guildMemberAdd', async member => {
 	db.get(`${member.guild.id}.countChannels`).value().forEach(channelDB => { 
 		let channel = member.guild.channels.cache.get(channelDB.id);
@@ -130,7 +133,7 @@ client.on('guildMemberAdd', async member => {
 	});
 });
 
-// update member counter on channels topic when member leave guild
+// atualiza o contador de membros no tópico dos canais quando um membro sai do servidor
 client.on('guildMemberRemove', async member => {
 	db.get(`${member.guild.id}.countChannels`).value().forEach(channelDB => { 
 		let channel = member.guild.channels.cache.get(channelDB.id);
@@ -139,7 +142,7 @@ client.on('guildMemberRemove', async member => {
 	}); 
 });
 
-// remove member counter channel from database if the channel is delete
+// remove o canal do contador caso ele seja deletado
 client.on('channelDelete', async channel => {
 	if(db.get(`${channel.guild.id}.countChannels`).find({id: channel.id}).value() != null){	
 		db.get(`${channel.guild.id}.countChannels`).remove({id: channel.id}).write();
